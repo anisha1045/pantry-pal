@@ -15,9 +15,10 @@ from dotenv import load_dotenv
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 BRITE_API_KEY = os.getenv("BRITE_API_KEY")
+FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY")
 
 app = Flask(__name__)
-app.secret_key = 'supersecretkey'
+app.secret_key = FLASK_SECRET_KEY
 app.register_blueprint(auth_bp, url_prefix="/auth")
 
 
