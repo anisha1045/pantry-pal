@@ -13,9 +13,9 @@ import re
 
 from dotenv import load_dotenv
 load_dotenv()
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-BRITE_API_KEY = os.getenv("BRITE_API_KEY")
-FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+BRITE_API_KEY = os.environ.get("BRITE_API_KEY")
+FLASK_SECRET_KEY = os.environ.get("FLASK_SECRET_KEY")
 
 app = Flask(__name__)
 app.secret_key = FLASK_SECRET_KEY
