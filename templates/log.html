@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Meal Planner</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='custom.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans&family=Outfit&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container d-flex align-items-center">
+            <a class="navbar-brand" href="{{ url_for('dashboard') }}">🥗 Pantry Pal</a>
+            <a class="navbar-item" href="{{ url_for('log') }}">Log</a>
+            <a class="navbar-item" href="{{ url_for('planner') }}">Planner</a>
+            <a class="navbar-item" href="{{ url_for('library') }}">Library</a>
+            {% if session.username %}
+            <a class="navbar-item d-flex align-items-center" href="{{ url_for('logout') }}">
+                <img src="profile.jpg" alt="Profile" style="width: 40px; height: 40px; background-color: white; border-radius: 50%; margin-right: 15px;">
+                Sign Out
+            </a>
+            {% else %}
+            <a class="navbar-item d-flex align-items-center" href="{{ url_for('sign_in') }}">
+                <img src="profile.jpg" alt="Profile" style="width: 40px; height: 40px; background-color: white; border-radius: 50%; margin-right: 15px;">
+                Sign In
+            </a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <div class="container my-4">
+        <div class="row">
+            <div class="col-lg-4 col-md-12">
+                <!-- Left column (Nutrition Facts) -->
+                <div class="card mb-4">
+                    <div class="card-header">Nutrition Facts</div>
+                    <div class="card-body" id="nutrient-progress-section">
+                        <p>Loading nutrition facts...</p>
+                    </div>
+                    <div class="card-body">
+                        <p>Would you like a recipe to fulfill these requirements?</p>
+                        <a class="btn btn-primary" href="../html/planner">See Recipes</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-8 col-md-12">
+                <!-- Right column (Meal form) -->
+                <div class="box">
+                    <h3>Log Your Meal</h3>
+        <div class="btn-group" role="group">
+            <input type="radio" id="textInput" name="inputMethod" checked>
+            <label for="textInput">Type Meal</label>
+            <input type="radio" id="imageInput" name="inputMethod">
+            <label for="imageInput">Upload Photo</label>
+        </div>
+
+        <div id="textInputSection">
+            <div id="foodInputs">
+                <input type="text" id="quantity" placeholder="Quantity (e.g. 2)">
+                <input type="text" id="food" placeholder="Food (e.g. eggs)">
+                <button onclick="addFood()">Enter</button>
+            </div>
+        </div>
+
+        <div id="imageInputSection">
+            <input type="file" id="mealImage" accept="image/*" capture="environment" onchange="previewImage(event)">
+            <div id="imagePreview" style="display:none;">
+                <img id="previewImg">
+            </div>
+        </div>
+        <div id="food-list"></div>
+        <button id="submit-btn" onclick="submitMeals()">Submit</button>
+    </div>
+</div>
+</div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", async () => {
+        const section = document.getElementById("nutrient-progress-section");
+
+        const recentDays = 1;
+        try {
+            const res = await fetch(`/nutrient_breakdown/${recentDays}`);
+            const data = await res.json();
+            section.innerHTML = "";
+
+            for (const [nutrient, [consumed, total, unit]] of Object.entries(data)) {
+                const percentage = total === 0 ? 0 : Math.min((consumed / total) * 100, 100).toFixed(1);
+                const color = getColorForNutrient(nutrient);
+
+                const block = document.createElement("div");
+                block.innerHTML = `
+                    <p>${nutrient}</p>
+                    <div class="progress mb-3" title="${consumed} / ${total} ${unit}">
+                        <div class="progress-bar ${color}" style="width: ${percentage}%;">
+                            ${percentage}% ${unit}
+                        </div>
+                    </div>
+                `;
+                section.appendChild(block);
+            }
+        } catch (err) {
+            console.error("Failed to load nutrients:", err);
+            section.innerHTML = "<p>Unable to load nutrient data.</p>";
+        }
+
+        function getColorForNutrient(nutrient) {
+            const lower = nutrient.toLowerCase();
+            if (lower.includes("protein")) return "bg-warning";
+            if (lower.includes("fat")) return "bg-danger";
+            if (lower.includes("carb")) return "bg-info";
+            if (lower.includes("fiber")) return "bg-success";
+            if (lower.includes("vitamin")) return "bg-primary";
+            if (lower.includes("iron") || lower.includes("zinc")) return "bg-danger";
+            return "bg-success";
+        }
+    });
+    const textInput = document.getElementById('textInput');
+    const imageInput = document.getElementById('imageInput');
+    const textInputSection = document.getElementById('textInputSection');
+    const imageInputSection = document.getElementById('imageInputSection');
+
+    function updateInputDisplay() {
+        if (textInput.checked) {
+            textInputSection.style.display = 'block';
+            imageInputSection.style.display = 'none';
+        } else {
+            textInputSection.style.display = 'none';
+            imageInputSection.style.display = 'block';
+        }
+    }
+    textInput.onchange = updateInputDisplay;
+    imageInput.onchange = updateInputDisplay;
+    updateInputDisplay();
+
+    let meals = [];
+    function addFood() {
+        const qty = document.getElementById('quantity').value.trim();
+        const food = document.getElementById('food').value.trim();
+        if (!qty || !food) return;
+        meals.push({ qty, food });
+        renderFoods();
+        document.getElementById('quantity').value = '';
+        document.getElementById('food').value = '';
+    }
+
+    function renderFoods() {
+    const foodList = document.getElementById('food-list');
+    foodList.innerHTML = '';
+    meals.forEach((item, index) => {
+        const div = document.createElement('div');
+        div.className = 'food-item';
+
+        // quantity input
+        const qtyInput = document.createElement('input');
+        qtyInput.type = 'text';
+        qtyInput.placeholder = 'Qty';
+        qtyInput.value = item.qty;
+        qtyInput.className = 'qty-input';
+        qtyInput.oninput = (e) => {
+            item.qty = e.target.value;
+        };
+
+        // food name
+        const foodName = document.createElement('span');
+        foodName.textContent = ` ${item.food} `;
+
+        // remove button
+        const x = document.createElement('span');
+        x.textContent = '×';
+        x.onclick = () => {
+            meals.splice(index, 1);
+            renderFoods();
+        };
+
+        div.appendChild(qtyInput);
+        div.appendChild(foodName);
+        div.appendChild(x);
+
+        foodList.appendChild(div);
+    });
+}
+
+async function submitMeals() {
+    // build dictionary of {food: quantity}
+    const mealData = {};
+    meals.forEach(item => {
+        mealData[item.food] = item.qty || "";
+    });
+
+    try {
+        const response = await fetch('/log_meal', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(mealData)
+        });
+
+        if (response.ok) {
+            console.log("Meal logged successfully");
+            // maybe clear meals?
+            meals = [];
+            renderFoods();
+
+            // clear text inputs
+            document.getElementById('quantity').value = '';
+            document.getElementById('food').value = '';
+
+            // clear file input & image preview
+            document.getElementById('mealImage').value = '';
+            document.getElementById('imagePreview').style.display = 'none';
+            document.getElementById('previewImg').src = '';
+
+            meals = [];
+            renderFoods();
+        } else {
+            console.error("Logging failed");
+        }
+    } catch (err) {
+        console.error("Error submitting meal:", err);
+    }
+}
+
+    async function identifyImage(file) {
+        try {
+            const formData = new FormData();
+            formData.append('mealImage', file);
+
+            const response = await fetch('/identify_food', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                console.log("Upload succeeded");
+                const data = await response.json();
+                console.log(data)
+
+                data.predicted_concepts.forEach(concept => {
+                    meals.push({ qty: '', food: concept.name });
+                });
+
+                renderFoods();
+
+                return data;  // or do something with response
+            } else {
+                throw new Error("Upload failed");
+            }
+        } catch (err) {
+            console.error("Save cancelled or failed:", err);
+        }
+    }
+
+    function previewImage(event) {
+        const imgPreview = document.getElementById('imagePreview');
+        const previewImg = document.getElementById('previewImg');
+        previewImg.src = URL.createObjectURL(event.target.files[0]);
+        imgPreview.style.display = 'block';
+        const file = document.getElementById('mealImage').files[0];
+        identifyImage(file)
+        .then(() => {
+            console.log("Save succeeded!");
+            alert("Image saved successfully!");
+        })
+        .catch(err => {
+            console.error("Save failed:", err);
+            alert("Failed to save image.");
+        });
+    }
+
+</script>
+
+</body>
+</html>
