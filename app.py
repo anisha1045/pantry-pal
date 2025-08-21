@@ -260,6 +260,7 @@ def get_meal_plan():
         # TODO: comment this back in
         response = requests.post(url, headers=headers, json=data)
         response_json = response.json()
+        print(response_json)
         content = response_json['choices'][0]['message']['content']
         print(content)
         if isinstance(content, str):
