@@ -6,3 +6,4 @@ clarifai==12.5.0
 clarifai-grpc==12.6.0
 Pillow==11.3.0
 python-dotenv
+gunicorn
