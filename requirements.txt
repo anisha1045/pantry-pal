@@ -7,7 +7,6 @@ certifi==2025.6.15
 charset-normalizer==3.4.2
 clarifai==11.6.4
 clarifai-grpc==11.6.2
-clarifai-protocol==0.0.25
 click==8.2.1
 contextlib2==21.6.0
 flake8==7.3.0
