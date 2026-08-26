@@ -1,6 +1,6 @@
 Flask==3.1.1
 Flask-WTF==1.2.2
-requests==2.32.4
+requests>=2.32.5
 requests-oauthlib==2.0.0
 clarifai==12.5.0
 clarifai-grpc==12.6.0
